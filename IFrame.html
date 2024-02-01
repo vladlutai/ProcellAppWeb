@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Title</title>
+</head>
+<body>
+<iframe
+  id="myIFrame"
+  height="700" width="1300"
+>
+</iframe>
+<button id="testButton" type="button">Test Button</button>
+<b>
+</body>
+<script>
+
+  let isIFrameLoadedAndReady = false;
+  let isUnityDataSent = false;
+  let isSelectDevicesWindowClosed = false;
+  let selectedIndustry = "";
+  let eventData = "";
+
+
+  let myIframe = document.getElementById("myIFrame");
+
+  const calculatorUrl = "https://uat.procell.com/wp-content/themes/jupiterx-child/assets/dist/insite-cost-calc/index.html?booth=1";
+  const newCustomerKeys = ["name", "email", "event", "company"];
+
+  Init();
+
+  function ReceiveUnityData(unityData){
+
+    let mainData = unityData;
+    unityData = JSON.parse(unityData)
+    let data = {};
+    data["name"] = unityData["Name"];
+    data["email"] = unityData["Email"];
+    data["event"] = unityData["EventName"];
+    data["company"] = unityData["Company"];
+    myIframe.contentWindow.postMessage({name: 'customer-data', data: data}, "*");
+    isUnityDataSent = true;
+    return JSON.stringify(data);
+  }
+
+  function GetUpdate(){
+    let update = {};
+
+    update["isIFrameLoadedAndReady"] = isIFrameLoadedAndReady;
+    update["isUnityDataSent"] = isUnityDataSent;
+    update["selectedIndustry"] = selectedIndustry;
+    update["isSelectDevicesWindowClosed"] = isSelectDevicesWindowClosed;
+    update["eventData"] = eventData;
+
+    return JSON.stringify(update);
+  }
+
+  /*function GetUpdate(){
+
+
+    return "Hello";
+  }*/
+
+  function Init(){
+    window.addEventListener('load', OnPageLoadedHandler)
+    window.addEventListener("message", OnReceivedMessageHandler, true);
+
+    myIframe.onload = OnIFrameLoadedHandler;
+    myIframe.src = GetIframeUrl();
+  }
+
+  function GetIframeUrl() {
+    const searchParam = new URLSearchParams(window.location.search)
+    return calculatorUrl + "&" + searchParam.toString();
+  }
+
+  function OnIFrameLoadedHandler(){
+    console.log("Iframe loaded!");
+    isIFrameLoadedAndReady = true;
+  }
+
+  function OnPageLoadedHandler() {
+    console.log("Page is loaded!")
+  }
+
+  function OnReceivedMessageHandler(event) {
+    console.log("OnReceivedMessageHandler")
+    console.log('received response:  ', event.data);
+
+    if(event.data['name'] === "calculation-update"){
+      selectedIndustry = event.data['data']['industry'];
+      eventData = JSON.stringify(event.data['data']);
+    }
+
+    if(event.data['name'] === "select-devices-dismissed"){
+      isSelectDevicesWindowClosed = true;
+    }
+  }
+
+  //OLD-------------------------------------------------------------------------------------------
+
+  let button = document.getElementById("testButton");
+  button.onclick = function () {
+    // let unityData = {};
+    // unityData["name"] = "Mark";
+    // unityData["email"] = "mark@unity.com";
+    // unityData["event"] = "SomeEvent";
+    // unityData["company"] = "Unity";
+    // myIframe.contentWindow.postMessage({name: 'customer-data', data: unityData}, "*");
+    let unityData = {}
+    unityData["Name"] = "SomeName";
+    unityData["Email"] = "SomeMail";
+    unityData["EventName"] = "SomeEvent"
+    unityData["Company"] = "SomeCompany"
+    ReceiveUnityData(unityData)
+  }
+
+  function UpdateUrlParam(key, value) {
+    const searchParam = new URLSearchParams(window.location.search)
+    searchParam.set(key, value);
+    UpdateUrl(searchParam);
+  }
+
+  function SetNewCustomerUrlParam(unityData) {
+    const searchParam = new URLSearchParams()
+    for (let i = 0; i < newCustomerKeys.length; i++) {
+      let key = newCustomerKeys[i];
+      searchParam.set(key, unityData[key]);
+    }
+    console.log(unityData);
+    console.log(searchParam.toString());
+    UpdateUrl(searchParam);
+  }
+
+  function UpdateUrl(searchParam) {
+    const newRelativePathQuery = window.location.pathname + "?" + searchParam.toString();
+    history.replaceState(null, "", newRelativePathQuery);
+    myIframe.contentWindow.location.replace(myIframe.src + searchParam.toString());
+  }
+
+</script>
+</html>
+
